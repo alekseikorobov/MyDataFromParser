@@ -10,6 +10,12 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    db = NULL;
+    movie= NULL;
+    th= NULL;
+    setting= NULL;
+    w= NULL;
+
 
 //    QString path = "/home/alekse/project/qt/fff2.csv";
 
@@ -93,7 +99,9 @@ void MainWindow::on_pushButton_clicked()
     if(!initData()){return;}
 
     this->th = new QThread;
+    w->sl = sl;
     //w->Scan();
+    movie->start();
     w->moveToThread(th);
     connect(th, SIGNAL(started()), w, SLOT(Scan()));
     connect(w, SIGNAL(onComplit()), this, SLOT(Complite()));
@@ -174,7 +182,7 @@ void MainWindow::on_pushButton_5_clicked()
     if(initData()){
 
         if(w->DeleteEmptyCat()){
-            ui->label_9->setText("Результат: завершено успешно");
+            ui->label_9->setText("Результат: запрос выполнен успешно");
         }
         else{
             ui->label_9->setText("Результат: не удалось выполнить запрос");

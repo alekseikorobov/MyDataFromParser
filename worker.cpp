@@ -46,7 +46,7 @@ void worker::Scan(){
     }
 
     foreach (string str, sl) {
-        QStringList s = str.split(",");
+        QStringList s = str.split("\t");
         string art="",pr="",c="";
         if(s.size() > 4){
             listError.append("Запятых больше 4х");
@@ -56,22 +56,26 @@ void worker::Scan(){
         if(s.size() == 4){
             art = s[0];
             pr = string(s[1]) +string(",") +string(s[2]);
-            c = s[3];
+            c = s[3];            
+            db->query->exec(string("insert into skus_temp(name,prise,count) values('%1','%2',%3)").arg(art,pr,c));
         }
 
         if(s.size() == 3){
             art = s[0];
             pr = s[1];
             c = s[2];
+            db->query->exec(string("insert into skus_temp(name,prise,count) values('%1','%2',%3)").arg(art,pr,c));
         }
         if(s.size() == 2){
             art = s[0];
             pr = s[1];
+            db->query->exec(string("insert into skus_temp(name,prise) values('%1','%2')").arg(art,pr));
         }
         if(s.size() == 1){
             art = s[0];
+            db->query->exec(string("insert into skus_temp(name,prise) values('%1','%2')").arg(art,pr));
         }
-        db->query->exec(string("insert into skus_temp(name,prise,count) values('%1','%2',%3)").arg(art,pr,c));
+
     }
 
     string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),art nvarchar(255),image nvarchar(255),brand nvarchar(255)) "
