@@ -201,3 +201,17 @@ void worker::Scan(){
 
             emit onComplit();
 }
+
+
+bool worker::DeleteEmptyCat(){
+    if(!db->query->exec("SET SQL_SAFE_UPDATES = 0;")){
+        listError.append("Не удалось выполнить запрос SET SQL_SAFE_UPDATES = 0;");
+        return false;
+    }
+    if(!db->query->exec("delete c from category c left join product p on c.id = p.cat_id where p.cat_id is null;")){
+        listError.append("Не удалось выполнить запрос на удаление пустых категорий");
+        return false;
+    }
+
+    return true;
+}

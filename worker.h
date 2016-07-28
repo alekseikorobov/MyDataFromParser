@@ -22,6 +22,7 @@ public:
     QStringList listNot;
     QStringList listError;
     QString pathSave;
+    bool DeleteEmptyCat();
 signals:
 
 public slots:

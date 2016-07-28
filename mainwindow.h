@@ -32,6 +32,8 @@ private slots:
 
     void on_pushButton_4_clicked();
 
+    void on_pushButton_5_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -42,6 +44,7 @@ private:
     worker *w;
     void InitConnectDb();
 
+    bool initData(); //инициализация данных
 };
 
 #endif // MAINWINDOW_H

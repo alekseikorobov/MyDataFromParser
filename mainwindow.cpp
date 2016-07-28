@@ -42,6 +42,39 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+//сначала инициализируем базу данных и класс обработки
+bool MainWindow::initData(){
+
+    if(!db){
+        db = new LibConnect(ui->tHost->text(),
+                        ui->tDb->text(),ui->tUser->text(),ui->tPass->text(),
+                        QVariant(ui->tPort->text()).toInt());
+    }
+    if(!db->isConnect){
+        if(!db->connect()){
+            QMessageBox::information(this,"Подключение","Подключение к базе данных не установлено! "
+                                     + db->lastError + ". Дальнейшая работа не возможна. Выполните настройку к базе");
+
+            return false;
+        }
+    }
+    if(!movie){
+        movie = new QMovie(":/new/prefix1/default.gif");
+        movie->setScaledSize(ui->label_2->size());
+        ui->label_2->setMovie(movie);
+    }
+    //movie->start();
+
+    if(!w){
+        w = new worker();
+    }
+    if(w->pathSave != ui->pathSave->text()){
+        w->pathSave = ui->pathSave->text();
+    }
+    w->db = db;
+
+    return true;
+}
 
 void MainWindow::on_pushButton_clicked()
 {
@@ -53,41 +86,13 @@ void MainWindow::on_pushButton_clicked()
     stringList sl;
     if(tc.indexOf("\n") !=-1){
         sl= tc.split("\n");
-//        foreach (string s , sl) {
-//            qDebug() << s;
-//        }
     }
     else{
         sl << tc;
-//        qDebug() << tc;
     }
+    if(!initData()){return;}
 
-
-//    setting->ipStart = ui->ipStart->text();
-//    setting->ipEnd = ui->ipEnd->text();
-//    setting->WriteSettings();
-
-    db = new LibConnect(ui->tHost->text(),
-                        ui->tDb->text(),ui->tUser->text(),ui->tPass->text(),
-                        QVariant(ui->tPort->text()).toInt());
-    if(!db->isConnect){
-        if(!db->connect()){
-            QMessageBox::information(this,"Подключение","Подключение к базе данных не установлено! "
-                                     + db->lastError + ". Дальнейшая работа не возможна. Выполните настройку к базе");
-
-            return;
-        }
-    }
-    movie = new QMovie(":/new/prefix1/default.gif");
-    movie->setScaledSize(ui->label_2->size());
-    ui->label_2->setMovie(movie);
-    movie->start();
-
-    w = new worker();
     this->th = new QThread;
-    w->pathSave = ui->pathSave->text();
-    w->db = db;
-    w->sl = sl;
     //w->Scan();
     w->moveToThread(th);
     connect(th, SIGNAL(started()), w, SLOT(Scan()));
@@ -156,10 +161,23 @@ void MainWindow::on_pushButton_3_clicked()
 void MainWindow::on_pushButton_4_clicked()
 {
     if(th){
-        //w->db->query->
         th->exit();
         movie->stop();
         delete th;
     }
 
+}
+
+//удаление пустых категорий
+void MainWindow::on_pushButton_5_clicked()
+{
+    if(initData()){
+
+        if(w->DeleteEmptyCat()){
+            ui->label_9->setText("Результат: завершено успешно");
+        }
+        else{
+            ui->label_9->setText("Результат: не удалось выполнить запрос");
+        }
+    }
 }
