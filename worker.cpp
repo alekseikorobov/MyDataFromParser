@@ -16,7 +16,7 @@ void worker::Scan(){
         return;
     }
 
-    if(!db->exec("create table if not exists skus_temp(id int auto_increment primary key,name varchar(100), "
+    if(!db->exec("create temporary table if not exists skus_temp(id int auto_increment primary key,name varchar(100), "
                  "prise varchar(100),count int,prod_id int) DEFAULT CHARACTER SET cp1251 COLLATE cp1251_general_ci;"
                  " ALTER TABLE skus_temp ADD UNIQUE INDEX in_id (id ASC); "
                  " ALTER TABLE skus_temp ADD INDEX in_prod (prod_id ASC); "
@@ -32,18 +32,18 @@ void worker::Scan(){
             emit onComplit();
             return;
         }
-    db->exec("alter table product add art nvarchar(100);");
+    //db->exec("alter table product add art nvarchar(100);");
 
     if(!db->query->exec("SET SQL_SAFE_UPDATES = 0;")){
         listError.append("Не удалось выполнить запрос SET SQL_SAFE_UPDATES = 0;");
         emit onComplit();
         return;
     }
-    if(!db->query->exec("update product set art = concat('1',LPAD(id,5,'0')) where art is null ;")){
-        listError.append("Не удалось выполнить запрос update proc");
-        emit onComplit();
-        return;
-    }
+//    if(!db->query->exec("update product set art = concat('1',LPAD(id,5,'0')) where art is null ;")){
+//        listError.append("Не удалось выполнить запрос update proc");
+//        emit onComplit();
+//        return;
+//    }
 
     foreach (string str, sl) {
         QStringList s = str.split("\t");
@@ -78,25 +78,13 @@ void worker::Scan(){
 
     }
 
-    string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),art nvarchar(255),image nvarchar(255),brand nvarchar(255)) "
-            " DEFAULT CHARACTER SET cp1251 COLLATE cp1251_general_ci; "
-            " ALTER TABLE temp_data ADD INDEX in_prod_id (id ASC); "
-            " ALTER TABLE temp_data ADD INDEX in_name (`name` ASC); "
-            " truncate table temp_data; "
-            " insert into temp_data(id,har_value,name,prod,art,image,brand)  "
-            " select p.id,v.har_value,h.name,p.name prod,p.art,p.image,p.brand from hars_values v join hars h on v.har_id = h.id    "
-                                  " join product p on v.prod_id=p.id and h.cat_id = p.cat_id ;";
-    if(!db->query->exec(temp)){
-        listError.append("Не удалось создать временную таблицу temp_data");
-        emit onComplit();
-        return;
-    }
-
     //обновление продуктов
     string qup ="update skus_temp s "
-            "join (SELECT har_value,id FROM  temp_data where name = 'Артикул') v1 on v1.har_value = s.name "
-              " set prod_id = v1.id "
-      " where s.id>0; ";
+            " join (select p.id,v.har_value"
+            " 		from hars_values v  join hars h on v.har_id = h.id"
+                " 						join product p on v.prod_id=p.id and h.cat_id = p.cat_id "
+                " where h.name = 'Артикул') v1 on v1.har_value = s.name"
+              " set prod_id = v1.id;";
 
      if(!db->query->exec(qup)){
          listError.append("Не удалось выполнить запрос update skus_temp s");
@@ -104,22 +92,38 @@ void worker::Scan(){
          return;
      }
 
+    string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),image nvarchar(255),brand nvarchar(255)) "
+            " DEFAULT CHARACTER SET cp1251 COLLATE cp1251_general_ci; "
+            " ALTER TABLE temp_data ADD INDEX in_prod_id (id ASC); "
+            " ALTER TABLE temp_data ADD INDEX in_name (`name` ASC); "
+            " truncate table temp_data; "
+            " insert into temp_data(id,har_value,name,prod,image,brand)  "
+            " select p.id,v.har_value,h.name,p.name prod,p.image,p.brand from hars_values v join hars h on v.har_id = h.id    "
+                                  " join product p on v.prod_id=p.id and h.cat_id = p.cat_id "
+            " where p.id in (select prod_id from skus_temp);";
+
+    if(!db->query->exec(temp)){
+        listError.append("Не удалось создать временную таблицу temp_data");
+        emit onComplit();
+        return;
+    }
+
 
      if(!db->query->exec("SET global group_concat_max_len = 18446744073709551615;")){
               listError.append("Не удалось выполнить SET global group_concat_max_len =");
               emit onComplit();
               return;
           }
-     string q = "select t1.id,replace(t1.prod,'#233;','') prod,t1.artic,t1.art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
+     string q = "select t1.id,replace(t1.prod,'#233;','') prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
                 "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
                 " from ( "
-                " SELECT dt.id,dt.prod,st.name artic,dt.art,st.prise,st.count,dt.image,dt.brand,"
-                " GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',dt.har_value) SEPARATOR  '</li>')  as xm,  "
-                " GROUP_CONCAT(concat('<tr><td>',replace(dt.name,'&#730;',''),'</td><td>',dt.har_value,'</td>') SEPARATOR '</tr>')  as htm "
-                " FROM (select id,har_value,name,prod,art,image,brand from temp_data where name <> 'Артикул' ) as dt  "
+                " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,"
+                " GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,  "
+                " GROUP_CONCAT(concat('<tr><td>',replace(dt.name,'&#730;',''),'</td><td>',replace(replace(dt.har_value,'&nbsp;',''),';',','),'</td>') SEPARATOR '</tr>')  as htm "
+                " FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  "
                 "                       right join skus_temp st on st.prod_id = dt.id "
-                " group by dt.id,dt.prod,st.name,dt.art,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  "
-                " group by t1.id,t1.prod,t1.artic,t1.art,t1.prise,t1.count,t1.xm,t1.htm,t1.image,t1.brand"
+                " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  "
+                " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.xm,t1.htm,t1.image,t1.brand"
                 " order by t1.id;";
 
     if(!db->exec(q)){
@@ -173,7 +177,9 @@ void worker::Scan(){
                 }
                 out  << db->query->value(1).toString() << n;///prod "Наименование"
                 out  << db->query->value(2).toString() << n;/// art "Артикула"
-                out  << db->query->value(3).toString() << n;///artic "Наименование артикул"
+                QString qst = db->query->value(3).toString();
+                qDebug() << qst;
+                out  << qst << n;///artic "Наименование артикул"
                 out  << "RUB;";                                                        ///"Валюта"
                 out  << db->query->value(4).toString() << n;/// prise "Цена"
                 out  << "1;";///"Доступен для заказа")<<
@@ -205,7 +211,6 @@ void worker::Scan(){
 
             emit onComplit();
 }
-
 
 bool worker::DeleteEmptyCat(){
     if(!db->query->exec("SET SQL_SAFE_UPDATES = 0;")){
