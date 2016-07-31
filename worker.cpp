@@ -46,17 +46,17 @@ void worker::Scan(){
 //    }
 
     foreach (string str, sl) {
-        QStringList s = str.split("\t");
+        QStringList s = str.split(seporator);
         string art="",pr="",c="";
         if(s.size() > 4){
-            listError.append("Запятых больше 4х");
+            listError.append("разделено больше 4х");
             emit onComplit();
             return;
         }
         if(s.size() == 4){
             art = s[0];
             pr = string(s[1]) +string(",") +string(s[2]);
-            c = s[3];            
+            c = s[3];
             db->query->exec(string("insert into skus_temp(name,prise,count) values('%1','%2',%3)").arg(art,pr,c));
         }
 
@@ -91,7 +91,6 @@ void worker::Scan(){
          emit onComplit();
          return;
      }
-
     string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),image nvarchar(255),brand nvarchar(255)) "
             " DEFAULT CHARACTER SET cp1251 COLLATE cp1251_general_ci; "
             " ALTER TABLE temp_data ADD INDEX in_prod_id (id ASC); "
@@ -114,17 +113,17 @@ void worker::Scan(){
               emit onComplit();
               return;
           }
-     string q = "select t1.id,replace(t1.prod,'#233;','') prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
-                "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
-                " from ( "
-                " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,"
-                " GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,  "
-                " GROUP_CONCAT(concat('<tr><td>',replace(dt.name,'&#730;',''),'</td><td>',replace(replace(dt.har_value,'&nbsp;',''),';',','),'</td>') SEPARATOR '</tr>')  as htm "
-                " FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  "
-                "                       right join skus_temp st on st.prod_id = dt.id "
-                " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  "
-                " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.xm,t1.htm,t1.image,t1.brand"
-                " order by t1.id;";
+     string q = "select t1.id,replace(replace(replace(t1.prod,'#233;',''),'&quot;',' '),'&gt;',' ') prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
+             "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
+             " from ( "
+             " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,"
+             " GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,  "
+             " GROUP_CONCAT(concat('<tr><td>',replace(dt.name,'&#730;',''),'</td><td>',replace(replace(dt.har_value,'&nbsp;',''),';',','),'</td>') SEPARATOR '</tr>')  as htm "
+             " FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  "
+             "                       join skus_temp st on st.prod_id = dt.id "
+             " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  "
+             " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.xm,t1.htm,t1.image,t1.brand"
+             " order by t1.id;";
 
     if(!db->exec(q)){
         listError.append("Не удалось выполнить запрос выборки всех данных - " + db->lastError);
@@ -132,7 +131,6 @@ void worker::Scan(){
         return;
     }
     int i = 0;
-
 
     QTextStream out(&file);
     out.setCodec("windows-1251");
@@ -168,13 +166,13 @@ void worker::Scan(){
                 //qDebug() << "1111";
                 //out  << db->query->value(0).toString() << n;//id
 
-                if(db->query->value(0).isNull()){
-                    listNot.append(db->query->value(2).toString() +","+
-                                        db->query->value(4).toString() +","+
-                                        db->query->value(5).toString()
-                                           );
-                    continue;
-                }
+//                if(db->query->value(0).isNull()){
+//                    listNot.append(db->query->value(2).toString() +","+
+//                                        db->query->value(4).toString() +","+
+//                                        db->query->value(5).toString()
+//                                           );
+//                    continue;
+//                }
                 out  << db->query->value(1).toString() << n;///prod "Наименование"
                 out  << db->query->value(2).toString() << n;/// art "Артикула"
                 QString qst = db->query->value(3).toString();
@@ -209,6 +207,31 @@ void worker::Scan(){
             }
             file.close();
 
+
+            QString q1 = "select name,prise,count from skus_temp where prod_id is null;";
+
+            if(!db->exec(q1)){
+                listError.append("Не удалось выполнить запрос выборки всех данных - " + db->lastError);
+                 emit onComplit();
+                return;
+            }
+            while(db->query->next()){
+                listNot.append(db->query->value(0).toString() +string(seporator)+
+                                    db->query->value(1).toString() +string(seporator)+
+                                    db->query->value(2).toString()
+                                       );
+            }
+
+            QString q2 = "select id,min(har_value) from temp_data group by id having count(*) = 1 and min(`name`) = 'Артикул'";
+
+            if(!db->exec(q2)){
+                listError.append("Не удалось выполнить запрос выборки данных temp_data - " + db->lastError);
+                 emit onComplit();
+                return;
+            }
+            while(db->query->next()){
+                listNotHaract.append(db->query->value(1).toString());
+            }
             emit onComplit();
 }
 

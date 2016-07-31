@@ -50,30 +50,30 @@ MainWindow::~MainWindow()
 }
 //сначала инициализируем базу данных и класс обработки
 bool MainWindow::initData(){
-
-    if(!db){
+    ui->label_9->setText("Результат: ");
+    //if(!db){
         db = new LibConnect(ui->tHost->text(),
                         ui->tDb->text(),ui->tUser->text(),ui->tPass->text(),
                         QVariant(ui->tPort->text()).toInt());
-    }
-    if(!db->isConnect){
+    //}
+
         if(!db->connect()){
             QMessageBox::information(this,"Подключение","Подключение к базе данных не установлено! "
                                      + db->lastError + ". Дальнейшая работа не возможна. Выполните настройку к базе");
 
-            return false;
+//            return false;
         }
-    }
-    if(!movie){
+
+    //if(!movie){
         movie = new QMovie(":/new/prefix1/default.gif");
         movie->setScaledSize(ui->label_2->size());
         ui->label_2->setMovie(movie);
-    }
+    //}
     //movie->start();
 
-    if(!w){
+    //if(!w){
         w = new worker();
-    }
+    //}
     if(w->pathSave != ui->pathSave->text()){
         w->pathSave = ui->pathSave->text();
     }
@@ -100,6 +100,7 @@ void MainWindow::on_pushButton_clicked()
 
     this->th = new QThread;
     w->sl = sl;
+    w->seporator = ui->seporator->text();
     //w->Scan();
     movie->start();
     w->moveToThread(th);
@@ -126,15 +127,22 @@ void MainWindow::Complite(){
             ui->textEdit_2->append(str);
         }
     }
-    if(!w->listNot.isEmpty() && w->listError.isEmpty()){
+    if(!w->listNot.isEmpty() || !w->listNotHaract.isEmpty() && w->listError.isEmpty()){
         ui->label_9->setText("Результат: завершено, см дополнительно");
         int size = w->listNot.size();
-        ui->textEdit_2->append(string("Не найденые артикулы ") + QVariant(size).toString() + string(":"));
+        int size1 = w->listNotHaract.size();
+        ui->textEdit_2->append(string("Не найденые артикулы ") + QVariant(size).toString());
+        ui->textEdit_2->append(string("Артикулы без характеристик ") + QVariant(size1).toString());
         foreach (string str, w->listNot) {
             ui->textEdit_2->append(str);
         }
+        ui->textEdit_2->append("--------------");
+
+        foreach (string str, w->listNotHaract) {
+            ui->textEdit_2->append(str);
+        }
     }
-    if(w->listNot.isEmpty() && w->listError.isEmpty()){
+    if(w->listNot.isEmpty() && w->listError.isEmpty() && w->listNotHaract.isEmpty()){
         ui->label_9->setText("Результат: завершено успешно");
     }
     //w->

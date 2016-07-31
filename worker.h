@@ -18,8 +18,10 @@ class worker : public QObject
 public:
     explicit worker(QObject *parent = 0);
     LibConnect *db;
+    QString seporator;
     QStringList sl;
     QStringList listNot;
+    QStringList listNotHaract;
     QStringList listError;
     QString pathSave;
     bool DeleteEmptyCat();
