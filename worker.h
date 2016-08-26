@@ -25,6 +25,8 @@ public:
     QStringList listError;
     QString pathSave;
     bool DeleteEmptyCat();
+
+    QMap<QString,QString> q;
 signals:
 
 public slots:

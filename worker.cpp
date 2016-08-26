@@ -1,13 +1,142 @@
 #include "worker.h"
 #include <QFile>
+#include <QMap>
 
 worker::worker(QObject *parent) :
     QObject(parent)
 {
 }
 
+
+void worker::init(){
+    q.clear();
+    q.insert("&quot;","\"");
+    q.insert("&amp;","&");
+    q.insert("&lt;","<");
+    q.insert("&gt;",">");
+    q.insert("&nbsp;","");
+    q.insert("&iexcl;"," ");
+    q.insert("&cent;"," ");
+    q.insert("&pound;"," ");
+    q.insert("&curren;","¤");
+    q.insert("&yen;"," ");
+    q.insert("&brvbar;","¦");
+    q.insert("&sect;","§");
+    q.insert("&uml;"," ");
+    q.insert("&copy;","©");
+    q.insert("&ordf;"," ");
+    q.insert("&laquo;","«");
+    q.insert("&not;","¬");
+    q.insert("&shy;","");
+    q.insert("&reg;","®");
+    q.insert("&macr;"," ");
+    q.insert("&deg;","°");
+    q.insert("&plusmn;","±");
+    q.insert("&sup2;"," ");
+    q.insert("&sup3;"," ");
+    q.insert("&acute;"," ");
+    q.insert("&micro;"," ");
+    q.insert("&para;","¶");
+    q.insert("&middot;","·");
+    q.insert("&cedil;"," ");
+    q.insert("&sup1;"," ");
+    q.insert("&ordm;"," ");
+    q.insert("&raquo;","»");
+    q.insert("&frac14;"," ");
+    q.insert("&frac12;"," ");
+    q.insert("&frac34;"," ");
+    q.insert("&iquest;"," ");
+    q.insert("&Agrave;","A");
+    q.insert("&Aacute;","A");
+    q.insert("&Acirc;","A");
+    q.insert("&Atilde;","A");
+    q.insert("&Auml;","A");
+    q.insert("&Aring;","A");
+    q.insert("&AElig;"," ");
+    q.insert("&Ccedil;","C");
+    q.insert("&Egrave;","E");
+    q.insert("&Eacute;","E");
+    q.insert("&Ecirc;","E");
+    q.insert("&Euml;","E");
+    q.insert("&Igrave;","I");
+    q.insert("&Iacute;","I");
+    q.insert("&Icirc;","I");
+    q.insert("&Iuml;","I");
+    q.insert("&ETH;"," ");
+    q.insert("&Ntilde;","N");
+    q.insert("&Ograve;","O");
+    q.insert("&Oacute;","O");
+    q.insert("&Ocirc;","O");
+    q.insert("&Otilde;","O");
+    q.insert("&Ouml;","O");
+    q.insert("&times;"," ");
+    q.insert("&Oslash;","O");
+    q.insert("&Ugrave;","U");
+    q.insert("&Uacute;","U");
+    q.insert("&Ucirc;","U");
+    q.insert("&Uuml;","U");
+    q.insert("&Yacute;","Y");
+    q.insert("&THORN;"," ");
+    q.insert("&szlig;"," ");
+    q.insert("&agrave;","a");
+    q.insert("&aacute;","a");
+    q.insert("&acirc;","a");
+    q.insert("&atilde;","a");
+    q.insert("&auml;","a");
+    q.insert("&aring;","a");
+    q.insert("&aelig;"," ");
+    q.insert("&ccedil;","c");
+    q.insert("&egrave;","e");
+    q.insert("&eacute;","e");
+    q.insert("&ecirc;","e");
+    q.insert("&euml;","e");
+    q.insert("&igrave;","i");
+    q.insert("&iacute;","i");
+    q.insert("&icirc;","i");
+    q.insert("&iuml;","i");
+    q.insert("&eth;"," ");
+    q.insert("&ntilde;","n");
+    q.insert("&ograve;","o");
+    q.insert("&oacute;","o");
+    q.insert("&ocirc;","o");
+    q.insert("&otilde;","o");
+    q.insert("&ouml;","o");
+    q.insert("&divide;"," ");
+    q.insert("&oslash;","o");
+    q.insert("&ugrave;","u");
+    q.insert("&uacute;","u");
+    q.insert("&ucirc;","u");
+    q.insert("&uuml;","u");
+    q.insert("&yacute;","y");
+    q.insert("&thorn;"," ");
+    q.insert("&yuml;","y");
+    q.insert("&euro;","€");
+}
+
+QString worker::myReplace(QString str){
+    QString keyChar = ";";
+
+    QMapIterator<QString, QString> i(q);
+    bool isexists = false;
+    while (i.hasNext()) {
+        i.next();
+        //qDebug() << "Поиск символа " << i.key();
+        str = str.replace(i.key(),i.value());
+        isexists = str.indexOf(keyChar) == -1;
+        if(isexists){
+            //qDebug() << "Больше символов не осталось, выходим";
+            break;
+        }
+    }
+    if(!isexists){
+        str = str.replace(keyChar," ");
+    }
+    return str;
+}
+
 void worker::Scan(){
 
+   /* initCode();*/
     QFile file(pathSave);
     file.remove();
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)){
@@ -56,7 +185,7 @@ void worker::Scan(){
         if(s.size() == 4){
             art = s[0];
             pr = string(s[1]) +string(",") +string(s[2]);
-            c = s[3];
+            c = s[3];            
             db->query->exec(string("insert into skus_temp(name,prise,count) values('%1','%2',%3)").arg(art,pr,c));
         }
 
