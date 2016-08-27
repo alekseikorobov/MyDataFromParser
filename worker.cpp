@@ -123,6 +123,8 @@ QString worker::myReplaceMask(QString str){
         str = str.replace(replaceTo,QString(ch));
         pos += rx.matchedLength();
         pos -= (replaceTo.size() - val.size());
+
+
     }
     return str;
 }
@@ -144,9 +146,83 @@ QString worker::myReplace(QString str){
 }
 
 
+
+int worker::findHar(QString str){
+    for (int i = 0; i < har.size(); ++i)
+        if(har[i].key == str) return i;
+    return -1;
+}
+
+
+
+QString worker::getStringJoinVal(){
+    QString res = "";
+    foreach (data dt, har) {
+        res += dt.val;
+    }
+    return res;
+}
+
+QString worker::getStringJoinKey(){
+    QString res = "";
+    foreach (data dt, har) {
+        res += dt.key + ";";
+    }
+    return res;
+}
+QString worker::getKey(QString str,int countPoles){
+    QString pat = "<tr><td>([^<]*)</td><td>([^<]*)</td></tr>";
+    QRegExp rx(pat);
+
+    int pos = 0;
+    //Сначала обнуляем все значения которые есть в списке
+    /*QMapIterator<QString, QString> i(har);
+    while (i.hasNext()) {
+        i.next();
+        har[i.key()] = ";";
+    }*/
+
+    foreach (data dt, har) {
+        dt.val =";";
+    }
+
+    /*QList<QString> keys = har.keys();
+    foreach (QString key, keys) {
+        har[key]=";";
+    }*/
+
+    //далее заполняем все значения, если есть - обновляем, если нет - добавляем в конец
+    while ((pos = rx.indexIn(str, pos)) != -1) {
+
+        QString key = rx.cap(1);
+        QString val = rx.cap(2);
+        //qDebug() << key << " " <<val;
+        data dt = data(key,val + ";");
+        int index = findHar(key);
+        if(index>-1) har[index] = dt;
+        else har.append(dt);
+
+        pos += rx.matchedLength();
+    }
+    ///при возвращении добавить число действительных полей
+    /// (то есть количество ; после последнего поля)
+    /// с помощью запроса - select count(distinct name) from temp_data;
+
+    countPoles = countPoles-har.size();
+    QString emptPole = "";
+
+    for (int x = 0; x < countPoles; ++x) {
+        emptPole += ";";
+    }
+    //вернуть форматированные значения и плюс пустые поля
+    return getStringJoinVal() + emptPole;
+}
+
+
 void worker::Scan(){
 
-   /* initCode();*/
+    init();
+    har.clear();
     QFile file(pathSave);
     file.remove();
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)){
@@ -246,22 +322,33 @@ void worker::Scan(){
         return;
     }
 
+    string getcountString = "select count(distinct name) from temp_data;";
+    if(!db->exec(getcountString)){
+        listError.append("Не удалось выполнить запрос select count(distinct name) from temp_data; - " + db->lastError);
+         emit onComplit();
+        return;
+    }
+    int countHaractKey = 0;
+    while(db->query->next()){
+        countHaractKey = db->query->value(0).toInt();
+    }
+
 
      if(!db->query->exec("SET global group_concat_max_len = 18446744073709551615;")){
               listError.append("Не удалось выполнить SET global group_concat_max_len =");
               emit onComplit();
               return;
           }
-     string q = "select t1.id,t1.prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
+     string q = "select t1.id,t1.prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand,"
              "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
              " from ( "
              " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,"
-             " GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,  "
-             " GROUP_CONCAT(concat('<tr><td>',replace(dt.name,'&#730;',''),'</td><td>',replace(replace(dt.har_value,'&nbsp;',''),';',','),'</td>') SEPARATOR '</tr>')  as htm "
+             //" GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,  "
+             " GROUP_CONCAT(concat('<tr><td>',dt.name,'</td><td>',dt.har_value,'</td>') SEPARATOR '</tr>')  as htm "
              " FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  "
              "                       join skus_temp st on st.prod_id = dt.id "
              " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  "
-             " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.xm,t1.htm,t1.image,t1.brand"
+             " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand"
              " order by t1.id;";
 
     if(!db->exec(q)){
@@ -270,7 +357,9 @@ void worker::Scan(){
         return;
     }
     int i = 0;
-
+    //getStringJoinKey()
+        /// вставить полученные поля, после прохода всех строк
+        /// КУДА ВСТАВЛЯТЬ БРЕНД ПОКА НЕПОНЯТНО!
     QTextStream out(&file);
     out.setCodec("windows-1251");
     out  <<QString("Наименование;")<<
@@ -323,13 +412,13 @@ void worker::Scan(){
                 out  << "0;";///"Зачеркнутая цена")<<
                 out  << "0;";///"Закупочная цена"
                 out  << db->query->value(5).toString() << n;/// count "В наличии"
-                out  << QString("<ul>") << db->query->value(6).toString()
+                /*out  << QString("<ul>") << db->query->value(6).toString()
                      << QString("</li><li><b>")<< QString("Бренд</b>: ") << db->query->value(8).toString()
-                     << QString("</li>") <<QString("</ul>") << n;/// xm "Краткое описание"
-                out  << QString("<table>") << db->query->value(7).toString()
-                     << QString("</tr><tr><td>")<< QString("Бренд</td><td>") << db->query->value(8).toString()
-                     << QString("</td></tr>")
-                     << QString("</table>") << n;/// htm "Описание"
+                     << QString("</li>") <<QString("</ul>") << n;/// xm "Краткое описание"*/
+                out  << getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey) <<
+
+                     n;/// htm "Описание"
+                //QString("Бренд") << db->query->value(7).toString()
                 out  << n;/// "Наклейка")<<
                 out  << QString("1;");/// "Статус")<<
                 out  << n;/// "Тип товаров")<<
@@ -341,7 +430,7 @@ void worker::Scan(){
                 out  << db->query->value(1).toString() << n;///prod "META Description")<<
                 out  << n;/// "Ссылка на витрину")<<
                 out  << n;/// "Дополнительные параметры" << n;
-                out  << db->query->value(9).toString();/// img(;)
+                out  << db->query->value(8).toString();/// img(;)
                 out  << QString("\n");
             }
             file.close();

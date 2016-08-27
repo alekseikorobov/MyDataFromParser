@@ -18,6 +18,10 @@ class worker : public QObject
     QString myReplaceMask(QString str);
     void init();
     QString myReplace(QString str);
+    int findHar(QString str);
+    QString getStringJoinVal();
+    QString getStringJoinKey();
+    QString getKey(QString str, int countPoles);
 public:
     explicit worker(QObject *parent = 0);
     LibConnect *db;
@@ -30,6 +34,7 @@ public:
     bool DeleteEmptyCat();
 
     QMap<QString,QString> q;
+    QList<data> har;
 signals:
 
 public slots:
