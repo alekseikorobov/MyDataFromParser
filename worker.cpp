@@ -113,26 +113,34 @@ void worker::init(){
     q.insert("&euro;","€");
 }
 
-QString worker::myReplace(QString str){
-    QString keyChar = ";";
-
-    QMapIterator<QString, QString> i(q);
-    bool isexists = false;
-    while (i.hasNext()) {
-        i.next();
-        //qDebug() << "Поиск символа " << i.key();
-        str = str.replace(i.key(),i.value());
-        isexists = str.indexOf(keyChar) == -1;
-        if(isexists){
-            //qDebug() << "Больше символов не осталось, выходим";
-            break;
-        }
-    }
-    if(!isexists){
-        str = str.replace(keyChar," ");
+QString worker::myReplaceMask(QString str){
+    QRegExp rx("&#(\\d+);");
+    int pos = 0;
+    while ((pos = rx.indexIn(str, pos)) != -1) {
+        int charInt = QVariant(rx.cap(1)).toInt();
+        QChar ch(charInt);
+        QString replaceTo = str.mid(pos,rx.matchedLength());
+        str = str.replace(replaceTo,QString(ch));
+        pos += rx.matchedLength();
     }
     return str;
 }
+QString worker::myReplace(QString str){
+    QString keyChar = ";";
+    str = myReplaceMask(str);
+    if(str.indexOf(keyChar) == -1) return str;
+    QRegExp rx("&([A-z]+);");
+    int pos = 0;
+    while ((pos = rx.indexIn(str, pos)) != -1) {
+        QString replaceTo = str.mid(pos,rx.matchedLength());
+        QString val = q[replaceTo];
+        if(!val.isEmpty()) str = str.replace(replaceTo,val);
+        pos += rx.matchedLength();
+    }
+    if(str.indexOf(keyChar) != -1) str = str.replace(keyChar," ");
+    return str;
+}
+
 
 void worker::Scan(){
 
@@ -242,7 +250,7 @@ void worker::Scan(){
               emit onComplit();
               return;
           }
-     string q = "select t1.id,replace(replace(replace(t1.prod,'#233;',''),'&quot;',' '),'&gt;',' ') prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
+     string q = "select t1.id,t1.prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.xm,t1.htm,t1.brand,"
              "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
              " from ( "
              " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,"
@@ -302,7 +310,7 @@ void worker::Scan(){
 //                                           );
 //                    continue;
 //                }
-                out  << db->query->value(1).toString() << n;///prod "Наименование"
+                out  << myReplace(db->query->value(1).toString()) << n;///prod "Наименование"
                 out  << db->query->value(2).toString() << n;/// art "Артикула"
                 QString qst = db->query->value(3).toString();
                 qDebug() << qst;

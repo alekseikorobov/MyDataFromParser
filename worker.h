@@ -15,6 +15,9 @@ struct data{
 class worker : public QObject
 {
     Q_OBJECT
+    QString myReplaceMask(QString str);
+    void init();
+    QString myReplace(QString str);
 public:
     explicit worker(QObject *parent = 0);
     LibConnect *db;
