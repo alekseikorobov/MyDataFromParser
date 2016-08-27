@@ -136,6 +136,7 @@ QString worker::myReplace(QString str){
         QString val = q[replaceTo];
         if(!val.isEmpty()) str = str.replace(replaceTo,val);
         pos += rx.matchedLength();
+        pos -= (replaceTo.size() - val.size());
     }
     if(str.indexOf(keyChar) != -1) str = str.replace(keyChar," ");
     return str;
