@@ -99,5 +99,6 @@ SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand
 FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  
 				   join skus_temp st on st.prod_id = dt.id 
 group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  
+		(select name from product group by name having count(*)>1 ) t2
 group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand
 order by t1.id;
