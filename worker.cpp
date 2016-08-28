@@ -149,7 +149,7 @@ QString worker::myReplace(QString str){
 
 int worker::findHar(QString str){
     for (int i = 0; i < har.size(); ++i)
-        if(har[i].key == str) return i;
+        if(har[i].key == str.toLower()) return i;
     return -1;
 }
 QString worker::getStringJoinVal(){
@@ -194,7 +194,7 @@ QString worker::getKey(QString str,int countPoles){
         QString key = rx.cap(1);
         QString val = rx.cap(2);
         //qDebug() << key << " " <<val;
-        data dt = data(key,val + ";");
+        data dt = data(key.toLower(),val + ";");
         int index = findHar(key);
         if(index>-1) har[index] = dt;
         else har.append(dt);
@@ -206,6 +206,10 @@ QString worker::getKey(QString str,int countPoles){
     /// с помощью запроса - select count(distinct name) from temp_data;
 
     countPoles = countPoles-(har.size()-1); //количество характеристик должно быть на 1 меньше
+
+    //qDebug() << "countPoles" <<" " << countPoles;
+    //qDebug() << "har.size()" <<" " << har.size();
+
     QString emptPole = "";
 
     for (int x = 0; x < countPoles; ++x) {
@@ -309,7 +313,8 @@ void worker::Scan(){
             " ALTER TABLE temp_data ADD INDEX in_name (`name` ASC); "
             " truncate table temp_data; "
             " insert into temp_data(id,har_value,name,prod,image,brand)  "
-            " select p.id,v.har_value,h.name,p.name prod,p.image,p.brand from hars_values v join hars h on v.har_id = h.id    "
+            " select p.id,v.har_value,h.name,p.name prod,p.image,p.brand "
+                  "from hars_values v join hars h on v.har_id = h.id    "
                                   " join product p on v.prod_id=p.id and h.cat_id = p.cat_id "
             " where p.id in (select prod_id from skus_temp);";
 
@@ -319,7 +324,7 @@ void worker::Scan(){
         return;
     }
 
-    string getcountString = "select count(distinct name) from temp_data;";
+    string getcountString = "select count(distinct name) from temp_data;";//3360 335
     if(!db->exec(getcountString)){
         listError.append("Не удалось выполнить запрос select count(distinct name) from temp_data; - " + db->lastError);
          emit onComplit();
@@ -330,7 +335,7 @@ void worker::Scan(){
         countHaractKey = db->query->value(0).toInt()-2; ///минус 2 потому что разделителей на 1
                                                         ///меньше и одна характеристика это всегда артикул
     }
-
+    qDebug() << "countHaractKey" << " " << countHaractKey;
 
      if(!db->query->exec("SET global group_concat_max_len = 18446744073709551615;")){
               listError.append("Не удалось выполнить SET global group_concat_max_len =");
