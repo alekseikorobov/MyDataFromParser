@@ -122,7 +122,7 @@ QString worker::myReplaceMask(QString str){
         QString replaceTo = str.mid(pos,rx.matchedLength());
         str = str.replace(replaceTo,QString(ch));
         pos += rx.matchedLength();
-        pos -= (replaceTo.size() - val.size());
+        pos -= (replaceTo.size() - 1);
 
 
     }

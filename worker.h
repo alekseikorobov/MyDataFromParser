@@ -8,8 +8,14 @@
 
 #define string QString
 
-struct data{
-
+class data{
+public:
+    data(QString key,QString val){
+        this->key = key;
+        this->val = val;
+    }
+    QString key;
+    QString val;
 };
 
 class worker : public QObject
