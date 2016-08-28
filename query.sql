@@ -90,15 +90,20 @@ create temporary table if not exists temp_data(id int,har_value nvarchar(500),na
     
 select count(distinct name) from temp_data;
 
-select t1.id,t1.prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand,
+select t1.id,ifnull(concat(t2.name,' (',concat('1',LPAD(p.id,5,'0')),')'),t1.prod) prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand,
   concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  
 from (
 SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand
-#,GROUP_CONCAT(concat('<li><b>',replace(dt.name,'&#730;',''),'</b> : ',replace(replace(dt.har_value,'&nbsp;',''),';',',')) SEPARATOR  '</li>')  as xm,
 ,GROUP_CONCAT(concat('<tr><td>',dt.name,'</td><td>',dt.har_value,'</td>') SEPARATOR '</tr>')  as htm 
 FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt  
 				   join skus_temp st on st.prod_id = dt.id 
 group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id  
-		(select name from product group by name having count(*)>1 ) t2
-group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand
+		left join (select name from product group by name having count(*)>1) t2 on t1.prod= t2.name
+group by t1.id,t1.prod,t2.name,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand
 order by t1.id;
+
+
+
+select p.name,t2.name,ifnull(concat(p.name,' ',concat('1',LPAD(p.id,5,'0'))),p.name)
+from product p left join (select name from product group by name having count(*)>1 ) t2 on p.name= t2.name
+where t2.name is null;

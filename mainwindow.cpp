@@ -2,7 +2,7 @@
 #include "ui_mainwindow.h"
 #define stringList QStringList
 
-
+#include <QProcess>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -195,5 +195,12 @@ void MainWindow::on_pushButton_5_clicked()
         else{
             ui->label_9->setText("Результат: не удалось выполнить запрос");
         }
+    }
+}
+
+void MainWindow::on_pB_OpenFile_clicked()
+{
+    if(!ui->pathSave->text().isEmpty()){
+         QDesktopServices::openUrl(QUrl::fromUserInput(ui->pathSave->text()));
     }
 }
