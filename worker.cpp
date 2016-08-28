@@ -339,6 +339,7 @@ void worker::Scan(){
               emit onComplit();
               return;
           }
+     //добавить проверку на дубли. и если есть дубли, добавить внутренний артикул
      string q = "select t1.id,t1.prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand,"
              "      concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i  "
              " from ( "
