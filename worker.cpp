@@ -361,79 +361,82 @@ void worker::Scan(){
     //getStringJoinKey()
         /// вставить полученные поля, после прохода всех строк
         /// КУДА ВСТАВЛЯТЬ БРЕНД ПОКА НЕПОНЯТНО!
-    QTextStream out(&file);
-    out.setCodec("windows-1251");
-    out  <<QString("Наименование;")<<
-           QString("Наименование артикула;")<<
-           QString("Артикул;")<<
-           QString("Валюта;")<<
-           QString("Цена;")<<
-           QString("Доступен для заказа;")<<
-           QString("Зачеркнутая цена;")<<
-           QString("Закупочная цена;")<<
-           QString("В наличии;")<<
-           QString("Краткое описание;")<<
-           QString("Описание;")<<
-           QString("Наклейка;")<<
-           QString("Статус;")<<
-           QString("Тип товаров;")<<
-           QString("Бренд;")<<
-           QString("Теги;")<<
-           QString("Облагается налогом;")<<
-           QString("Заголовок;")<<
-           QString("META Keywords;")<<
-           QString("META Description;")<<
-           QString("Ссылка на витрину;")<<
-           QString("Дополнительные параметры");
-            for (int k = 0; k < 65; ++k) {
-                out << QString(";Изображения");
-            }
-            out << QString("\n");
 
+            QStringList listRow;
             QString n = QString(";");
             while(db->query->next()){
-                //qDebug() << "1111";
-                //out  << db->query->value(0).toString() << n;//id
 
-//                if(db->query->value(0).isNull()){
-//                    listNot.append(db->query->value(2).toString() +","+
-//                                        db->query->value(4).toString() +","+
-//                                        db->query->value(5).toString()
-//                                           );
-//                    continue;
-//                }
-                out  << myReplace(db->query->value(1).toString()) << n;///prod "Наименование"
-                out  << db->query->value(2).toString() << n;/// art "Артикула"
+                QString line;
+
+                //t1.id 0,t1.prod 1,t1.artic 2 ,art 3 ,t1.prise 4 ,t1.count 5 ,t1.htm 6 ,t1.brand 7 , i 8
+
+                line = myReplace(db->query->value(1).toString()) + n;///prod "Наименование"
+                line += db->query->value(2).toString() + n;/// art "Артикула"
                 QString qst = db->query->value(3).toString();
-                qDebug() << qst;
-                out  << qst << n;///artic "Наименование артикул"
-                out  << "RUB;";                                                        ///"Валюта"
-                out  << db->query->value(4).toString() << n;/// prise "Цена"
-                out  << "1;";///"Доступен для заказа")<<
-                out  << "0;";///"Зачеркнутая цена")<<
-                out  << "0;";///"Закупочная цена"
-                out  << db->query->value(5).toString() << n;/// count "В наличии"
-                /*out  << QString("<ul>") << db->query->value(6).toString()
-                     << QString("</li><li><b>")<< QString("Бренд</b>: ") << db->query->value(8).toString()
-                     << QString("</li>") <<QString("</ul>") << n;/// xm "Краткое описание"*/
-                out  << getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey) <<
-
-                     n;/// htm "Описание"
+                line +=  qst + n;///artic "Наименование артикул"
+                line +=  "RUB;";                                                        ///"Валюта"
+                line +=  db->query->value(4).toString() + n;/// prise "Цена"
+                line +=  "1;";///"Доступен для заказа")<<
+                line += "0;";///"Зачеркнутая цена")<<
+                line += "0;";///"Закупочная цена"
+                line +=  db->query->value(5).toString() + n;/// count "В наличии"
+                line += n;//Краткое описание;
+                line += n;//Описание;
                 //QString("Бренд") << db->query->value(7).toString()
-                out  << n;/// "Наклейка")<<
-                out  << QString("1;");/// "Статус")<<
-                out  << n;/// "Тип товаров")<<
-                out  << n; //db->query->value(8).toString()<< n;/// "Бренд")<< //специально оставляем пустым, чтобы на сайте отображалось корректно
-                out  << n;/// "Теги")<<
-                out  << n;/// "Облагается налогом")<<
-                out  << db->query->value(1).toString() << n;///prod "Заголовок")<<
-                out  << db->query->value(1).toString() << n;///prod "META Keywords")<<
-                out  << db->query->value(1).toString() << n;///prod "META Description")<<
-                out  << n;/// "Ссылка на витрину")<<
-                out  << n;/// "Дополнительные параметры" << n;
-                out  << db->query->value(8).toString();/// img(;)
-                out  << QString("\n");
+                line +=  n;/// "Наклейка")<<
+                line +=  QString("1;");/// "Статус")<<
+                line +=  n;/// "Тип товаров")<<
+                line +=  n;/// "Теги")<<
+                line += n;/// "Облагается налогом")<<
+                line +=  db->query->value(1).toString() + n;///prod "Заголовок")<<
+                line +=  db->query->value(1).toString() + n;///prod "META Keywords")<<
+                line +=  db->query->value(1).toString() + n;///prod "META Description")<<
+                line +=  n;/// "Ссылка на витрину")<<
+                line +=  n;/// "Дополнительные параметры" << n;
+                line += n; //db->query->value(8).toString()<< n;/// "Бренд")<< //специально оставляем пустым, чтобы на сайте отображалось корректно
+                line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey) + n;/// htm "Описание"
+                line += db->query->value(7).toString() + n;
+                line += db->query->value(8).toString();/// img(;)
+                line += QString("\n");
+
+                listRow.append(line);
             }
+
+            QTextStream out(&file);
+            out.setCodec("windows-1251");
+            out  <<QString("Наименование;")<<
+                   QString("Наименование артикула;")<<
+                   QString("Артикул;")<<
+                   QString("Валюта;")<<
+                   QString("Цена;")<<
+                   QString("Доступен для заказа;")<<
+                   QString("Зачеркнутая цена;")<<
+                   QString("Закупочная цена;")<<
+                   QString("В наличии;")<<
+                   QString("Краткое описание;")<<
+                   QString("Описание;")<<
+                   QString("Наклейка;")<<
+                   QString("Статус;")<<
+                   QString("Тип товаров;")<<
+                   QString("Теги;")<<
+                   QString("Облагается налогом;")<<
+                   QString("Заголовок;")<<
+                   QString("META Keywords;")<<
+                   QString("META Description;")<<
+                   QString("Ссылка на витрину;")<<
+                   QString("Дополнительные параметры")
+                   << getStringJoinKey()
+                   <<QString("Бренд;");
+
+                    for (int k = 0; k < 65; ++k) {
+                        out << QString(";Изображения");
+                    }
+                    out << QString("\n");
+            foreach (QString line1, listRow) {
+                out  << line1;
+            }
+
+
             file.close();
 
 
