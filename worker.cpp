@@ -205,7 +205,7 @@ QString worker::getKey(QString str,int countPoles){
     /// (то есть количество ; после последнего поля)
     /// с помощью запроса - select count(distinct name) from temp_data;
 
-    countPoles = countPoles-har.size();
+    countPoles = countPoles-(har.size()-1); //количество характеристик должно быть на 1 меньше
     QString emptPole = "";
 
     for (int x = 0; x < countPoles; ++x) {
@@ -350,7 +350,7 @@ void worker::Scan(){
              " group by t1.id,t1.prod,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand"
              " order by t1.id;";
      */
-     string q = "select t1.id,ifnull(concat(t2.name,' (',concat('1',LPAD(p.id,5,'0')),')'),t1.prod) prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand, "
+     string q = "select t1.id,ifnull(concat(t2.name,' (',concat('1',LPAD(t1.id,5,'0')),')'),t1.prod) prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand, "
            " concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i "
            " from ( "
            " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand "
