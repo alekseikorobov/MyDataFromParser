@@ -152,9 +152,6 @@ int worker::findHar(QString str){
         if(har[i].key == str) return i;
     return -1;
 }
-
-
-
 QString worker::getStringJoinVal(){
     QString res = "";
     foreach (data dt, har) {
@@ -330,7 +327,8 @@ void worker::Scan(){
     }
     int countHaractKey = 0;
     while(db->query->next()){
-        countHaractKey = db->query->value(0).toInt();
+        countHaractKey = db->query->value(0).toInt()-2; ///минус 2 потому что разделителей на 1
+                                                        ///меньше и одна характеристика это всегда артикул
     }
 
 
@@ -393,9 +391,9 @@ void worker::Scan(){
                 line +=  db->query->value(1).toString() + n;///prod "META Description")<<
                 line +=  n;/// "Ссылка на витрину")<<
                 line +=  n;/// "Дополнительные параметры" << n;
-                line += n; //db->query->value(8).toString()<< n;/// "Бренд")<< //специально оставляем пустым, чтобы на сайте отображалось корректно
-                line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey) + n;/// htm "Описание"
-                line += db->query->value(7).toString() + n;
+                //line += n; //db->query->value(8).toString()<< n;/// "Бренд")<< //специально оставляем пустым, чтобы на сайте отображалось корректно
+                line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey);/// htm "Описание"
+                line += db->query->value(7).toString() + n;/// "Бренд"
                 line += db->query->value(8).toString();/// img(;)
                 line += QString("\n");
 
@@ -424,9 +422,9 @@ void worker::Scan(){
                    QString("META Keywords;")<<
                    QString("META Description;")<<
                    QString("Ссылка на витрину;")<<
-                   QString("Дополнительные параметры")
-                   << getStringJoinKey()
-                   <<QString("Бренд;");
+                   QString("Дополнительные параметры;")
+                   << getStringJoinKey() ///все поля из характеристик
+                   <<QString("Бренд");
 
                     for (int k = 0; k < 65; ++k) {
                         out << QString(";Изображения");
