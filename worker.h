@@ -27,7 +27,7 @@ class worker : public QObject
     int findHar(QString str);
     QString getStringJoinVal();
     QString getStringJoinKey();
-    QString getKey(QString str, int countPoles);
+    QString getKey(QString str);
 public:
     explicit worker(QObject *parent = 0);
     LibConnect *db;

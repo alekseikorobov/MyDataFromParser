@@ -167,7 +167,7 @@ QString worker::getStringJoinKey(){
     }
     return res;
 }
-QString worker::getKey(QString str,int countPoles){
+QString worker::getKey(QString str){
     QString pat = "<tr><td>([^<]*)</td><td>([^<]*)</td></tr>";
     QRegExp rx(pat);
 
@@ -196,8 +196,8 @@ QString worker::getKey(QString str,int countPoles){
         //qDebug() << key << " " <<val;
         data dt = data(key,val + ";");
         int index = findHar(key);
-        if(index>-1) har[index] = dt;
-        else har.append(dt);
+        if(index==-1) qDebug() << "  Поле не найдено! " <<key;
+        //else har.append(dt);
 
         pos += rx.matchedLength();
     }
@@ -206,13 +206,13 @@ QString worker::getKey(QString str,int countPoles){
     /// с помощью запроса - select count(distinct name) from temp_data;
 
     countPoles = countPoles-(har.size()-1); //количество характеристик должно быть на 1 меньше
-    QString emptPole = "";
+    //QString emptPole = "";
 
-    for (int x = 0; x < countPoles; ++x) {
+    /*for (int x = 0; x < countPoles; ++x) {
         emptPole += ";";
-    }
+    }*/
     //вернуть форматированные значения и плюс пустые поля
-    return getStringJoinVal() + emptPole;
+    return getStringJoinVal();
 }
 
 
@@ -319,16 +319,17 @@ void worker::Scan(){
         return;
     }
 
-    string getcountString = "select count(distinct name) from temp_data;";
+    string getcountString = "select distinct name from temp_data;";
     if(!db->exec(getcountString)){
-        listError.append("Не удалось выполнить запрос select count(distinct name) from temp_data; - " + db->lastError);
+        listError.append("Не удалось выполнить запрос select distinct name from temp_data; - " + db->lastError);
          emit onComplit();
         return;
     }
-    int countHaractKey = 0;
+    //int countHaractKey = 0;
     while(db->query->next()){
-        countHaractKey = db->query->value(0).toInt()-2; ///минус 2 потому что разделителей на 1
-                                                        ///меньше и одна характеристика это всегда артикул
+        har.append(data(myReplace(db->query->value(0).toString()),";")); ///минус 2 потому что разделителей на 1
+                                                        ///меньше и одна характеристика это всегда артикул*/
+
     }
 
 
@@ -404,7 +405,7 @@ void worker::Scan(){
                 line +=  n;/// "Ссылка на витрину")<<
                 line +=  n;/// "Дополнительные параметры" << n;
                 //line += n; //db->query->value(8).toString()<< n;/// "Бренд")<< //специально оставляем пустым, чтобы на сайте отображалось корректно
-                line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")),countHaractKey);/// htm "Описание"
+                line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")));/// htm "Описание"
                 line += db->query->value(7).toString() + n;/// "Бренд"
                 line += db->query->value(8).toString();/// img(;)
                 line += QString("\n");

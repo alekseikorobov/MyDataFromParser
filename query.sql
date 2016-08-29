@@ -107,3 +107,23 @@ order by t1.id;
 select p.name,t2.name,ifnull(concat(p.name,' ',concat('1',LPAD(p.id,5,'0'))),p.name)
 from product p left join (select name from product group by name having count(*)>1 ) t2 on p.name= t2.name
 where t2.name is null;
+
+#дубли по ссылкам
+SELECT 
+    `product`.`cat_id`,
+    `product`.`name`,
+    `product`.`image`,
+    `product`.`price`,
+    `product`.`brand`,
+    `product`.`image_type`
+    #,`product`.`url`
+    ,count(*)
+FROM `eldorado`.`product`
+group by `product`.`cat_id`,
+    `product`.`name`,
+    `product`.`image`,
+    `product`.`price`,
+    `product`.`brand`,
+    `product`.`image_type`
+    #,`product`.`url`
+having count(*)>1;
