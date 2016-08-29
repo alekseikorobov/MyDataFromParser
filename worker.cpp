@@ -284,15 +284,17 @@ void worker::Scan(){
         emit onComplit();
         return;
     }
-    string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),image nvarchar(255),brand nvarchar(255)) "
+    string temp = "create temporary table if not exists temp_data(id int,har_value nvarchar(500),name nvarchar(500),prod nvarchar(500),image nvarchar(255),brand nvarchar(255),cat_name nvarchar(255)) "
                   " DEFAULT CHARACTER SET cp1251 COLLATE cp1251_general_ci; "
                   " ALTER TABLE temp_data ADD INDEX in_prod_id (id ASC); "
                   " ALTER TABLE temp_data ADD INDEX in_name (`name` ASC); "
                   " truncate table temp_data; "
-                  " insert into temp_data(id,har_value,name,prod,image,brand)  "
-                  " select p.id,v.har_value,h.name,p.name prod,p.image,p.brand "
+                  " insert into temp_data(id,har_value,name,prod,image,brand,cat_name)  " //что делать если категории для товара нет??
+                  " select p.id,v.har_value,h.name,p.name prod,p.image,p.brand,trim(substring(cat.cat_name,locate(':',cat.cat_name)+1)) "
                   "from hars_values v join hars h on v.har_id = h.id    "
                   " join product p on v.prod_id=p.id and h.cat_id = p.cat_id "
+                  " join category cat on cat.id = p.cat_id "
+
                   " where p.id in (select prod_id from skus_temp);";
 
     if(!db->query->exec(temp)){
@@ -318,15 +320,15 @@ void worker::Scan(){
         return;
     }
     string q = "select t1.id,ifnull(concat(t2.name,' (',concat('1',LPAD(t1.id,5,'0')),')'),t1.prod) prod,t1.artic,concat('1',LPAD(t1.id,5,'0')) art,t1.prise,t1.count,t1.htm,t1.brand, "
-               " concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i "
+               " concat(t1.image,ifnull(concat(';',GROUP_CONCAT(i.name SEPARATOR ';')),'') ) as i ,t1.cat_name"
                " from ( "
-               " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand "
+               " SELECT dt.id,dt.prod,st.name artic,st.prise,st.count,dt.image,dt.brand,dt.cat_name "
                " ,GROUP_CONCAT(concat('<tr><td>',dt.name,'</td><td>',dt.har_value,'</td>') SEPARATOR '</tr>')  as htm  "
-               " FROM (select id,har_value,name,prod,image,brand from temp_data where name <> 'Артикул' ) as dt   "
+               " FROM (select id,har_value,name,prod,image,brand,cat_name from temp_data where name <> 'Артикул' ) as dt   "
                "                    join skus_temp st on st.prod_id = dt.id  "
-               " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand) t1 left join images i on t1.id = i.prod_id   "
+               " group by dt.id,dt.prod,st.name,st.prise,st.count,dt.image,dt.brand,dt.cat_name) t1 left join images i on t1.id = i.prod_id   "
                "         left join (select name from product group by name having count(*)>1) t2 on t1.prod= t2.name "
-               " group by t1.id,t1.prod,t2.name,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand "
+               " group by t1.id,t1.prod,t2.name,t1.artic,t1.prise,t1.count,t1.htm,t1.image,t1.brand,t1.cat_name "
                " order by t1.id;";
 
     if(!db->exec(q)){
@@ -342,7 +344,7 @@ void worker::Scan(){
 
         QString line;
 
-        //t1.id 0,t1.prod 1,t1.artic 2 ,art 3 ,t1.prise 4 ,t1.count 5 ,t1.htm 6 ,t1.brand 7 , i 8
+        //t1.id 0,t1.prod 1,t1.artic 2 ,art 3 ,t1.prise 4 ,t1.count 5 ,t1.htm 6 ,t1.brand 7 , i 8 ,cat_name - 9
 
         line = myReplace(db->query->value(1).toString()) + n;///prod "Наименование"
         line += db->query->value(2).toString() + n;/// art "Артикула"
@@ -358,7 +360,7 @@ void worker::Scan(){
         line += n;//Описание;
         line +=  n;/// "Наклейка")<<
         line +=  QString("1;");/// "Статус")<<
-        line +=  n;/// "Тип товаров")<<
+        line +=  db->query->value(9).toString()+ n;/// "Тип товаров")<<
         line +=  n;/// "Теги")<<
         line += n;/// "Облагается налогом")<<
         line +=  db->query->value(1).toString() + n;///prod "Заголовок")<<
