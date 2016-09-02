@@ -28,6 +28,9 @@ class worker : public QObject
     QString getStringJoinVal();
     QString getStringJoinKey();
     QString getKey(QString str);
+    QString getCratHaract();
+    bool appendHaract();
+    bool append_Full_Haract();
 public:
     explicit worker(QObject *parent = 0);
     LibConnect *db;
@@ -41,6 +44,7 @@ public:
 
     QMap<QString,QString> q;
     QList<data> har;
+    QStringList fullhar;
 signals:
 
 public slots:

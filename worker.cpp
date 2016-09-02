@@ -7,7 +7,6 @@ worker::worker(QObject *parent) :
 {
 }
 
-
 void worker::init(){
     q.clear();
     q.insert("&quot;","\"");
@@ -145,8 +144,6 @@ QString worker::myReplace(QString str){
     return str;
 }
 
-
-
 int worker::findHar(QString str){
     for (int i = 0; i < har.size(); ++i)
         if(har[i].key == str) return i;
@@ -167,26 +164,16 @@ QString worker::getStringJoinKey(){
     }
     return res;
 }
+
 QString worker::getKey(QString str){
     QString pat = "<tr><td>([^<]*)</td><td>([^<]*)</td></tr>";
     QRegExp rx(pat);
 
     int pos = 0;
     //Сначала обнуляем все значения которые есть в списке
-    /*QMapIterator<QString, QString> i(har);
-    while (i.hasNext()) {
-        i.next();
-        har[i.key()] = ";";
-    }*/
-
     foreach (data dt, har) {
         dt.val =";";
     }
-
-    /*QList<QString> keys = har.keys();
-    foreach (QString key, keys) {
-        har[key]=";";
-    }*/
 
     //далее заполняем все значения, если есть - обновляем, если нет - говорим об ошибки
     while ((pos = rx.indexIn(str, pos)) != -1) {
@@ -204,6 +191,80 @@ QString worker::getKey(QString str){
     return getStringJoinVal();
 }
 
+
+//заполнения характеристиками
+bool worker::appendHaract(){
+    string getcountString = "select distinct(BINARY trim(lower(name))),trim(lower(name)) from temp_data;";
+    string har_q = "";
+    if(!db->exec(getcountString)){
+        listError.append("Не удалось выполнить запрос select distinct name from temp_data; - " + db->lastError);
+        //emit onComplit();
+        return false;
+    }
+    while(db->query->next()){
+        har_q = myReplace(db->query->value(1).toString().toLower());
+        if(fullhar.indexOf(har_q) != -1)
+            har.append(data(har_q,";"));
+    }
+
+    qDebug() << "Всего характеристик " << har.size();
+}
+//НЕОБХОДИМО СДЕЛАТЬ СТАТИЧЕСКИМ!!!!
+bool worker::append_Full_Haract(){
+
+    string str = "select c.cat_name,name,count(*) from hars h join hars_values hv on h.id = hv.har_id "
+                            " join category c on h.cat_id = c.id "
+                            " where cat_name  not like 'Market.yandex.ru%' "
+                            " and cat_name not like 'Wikimart.ru%' "
+                " group by c.cat_name,name "
+                " order by cat_name,count(*) desc;";
+    int maxCountHar = 15;                                                   // максимальное количество характеристик для каждой категории
+
+    if(!db->exec(str)){
+        listError.append("Не удалось выполнить запрос из appendHaract; - " + db->lastError);
+        return false;
+    }
+    string cat_name = "";                                                   // название текущей категории
+    string har_q = "";
+    int id_part = 1;
+    while(db->query->next()){                                               // по каждой строке из базы данных
+        string cat_name_q = db->query->value(0).toString();                 //запоминаем категорию
+        if(cat_name != cat_name_q){                                         //если текущая категория в памяти не равна данной строке
+            cat_name = cat_name_q;                                          //то запомнить эту новую категорию
+            id_part = 1;                                                    // и начать счетчик заново
+        }
+        else{
+            id_part++;                                                      //а иначе мы продолжаем по той же категории, и увеличиваем счетчик
+        }
+        if(id_part<=maxCountHar){                                           //проверяем какой сейчас счетчик, если он меньше заданного
+            har_q = myReplace(db->query->value(1).toString().toLower() );   //то пытаемся занести в список характеристику
+
+
+            if(fullhar.indexOf(har_q) == -1)                                        // если этой характеристики нет в списке
+                fullhar.append(har_q);  //har.append(data(har_q,";"));                                // то заносим
+
+        }
+                                                                            //выходим к следующей итерации
+    }
+    return true;
+}
+
+string worker::getCratHaract(){
+    string res = "<ul>";
+
+    /*<ul>
+            <li><b>Страна</b> : Малайзия</li>
+            <li><b>Гарантия производителя</b> : 1 год</li>
+            <li><b>Диагональ</b> : 32 (81.3 см)</li>
+    </ul>*/
+    foreach (data dt, har) {
+        if(dt.val !=";"){
+            res += "<li><b>"+dt.key+"</b> : "+dt.val+"</li>";
+        }
+    }
+    res += "</ul>";
+    return res;
+}
 
 void worker::Scan(){
 
@@ -303,17 +364,16 @@ void worker::Scan(){
         return;
     }
 
-    string getcountString = "select distinct(BINARY trim(lower(name))),trim(lower(name)) from temp_data;";
-    if(!db->exec(getcountString)){
-        listError.append("Не удалось выполнить запрос select distinct name from temp_data; - " + db->lastError);
+    if(!append_Full_Haract()){
         emit onComplit();
         return;
     }
-    while(db->query->next()){
-        har.append(data(myReplace(db->query->value(0).toString().toLower() ),";")); ///минус 2 потому что разделителей на 1
-        ///меньше и одна характеристика это всегда артикул*/
 
+    if(!appendHaract()){
+        emit onComplit();
+        return;
     }
+
     if(!db->query->exec("SET global group_concat_max_len = 18446744073709551615;")){
         listError.append("Не удалось выполнить SET global group_concat_max_len =");
         emit onComplit();
@@ -356,6 +416,9 @@ void worker::Scan(){
         line += "0;";///"Зачеркнутая цена")<<
         line += "0;";///"Закупочная цена"
         line +=  db->query->value(5).toString() + n;/// count "В наличии"
+        string polesHaracts = getKey(myReplace(db->query->value(6).toString() + QString("</tr>")));/// htm "Описание"
+        //мы специально получаем все характеристики, чтобы можно было полученные данных добавить в краткое описание
+        line += getCratHaract() + n;
         line += n;//Краткое описание;
         line += n;//Описание;
         line +=  n;/// "Наклейка")<<
@@ -368,7 +431,7 @@ void worker::Scan(){
         line +=  db->query->value(1).toString() + n;///prod "META Description")<<
         line +=  n;/// "Ссылка на витрину")<<
         line +=  n;/// "Дополнительные параметры" << n;
-        line += getKey(myReplace(db->query->value(6).toString() + QString("</tr>")));/// htm "Описание"
+        line += polesHaracts;
         line += db->query->value(7).toString() + n;/// "Бренд"
         line += db->query->value(8).toString();/// img(;)
         line += QString("\n");
