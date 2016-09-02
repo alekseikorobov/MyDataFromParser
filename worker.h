@@ -28,7 +28,7 @@ class worker : public QObject
     QString getStringJoinVal();
     QString getStringJoinKey();
     QString getKey(QString str);
-    QString getCratHaract();
+    QString getCratHaract(QString art);
     bool appendHaract();
     bool append_Full_Haract();
 public:

@@ -113,7 +113,7 @@ void worker::init(){
 }
 
 QString worker::myReplaceMask(QString str){
-    QRegExp rx("&#(\\d+);");
+    QRegExp rx("&#(\\d+)");//&#178
     int pos = 0;
     while ((pos = rx.indexIn(str, pos)) != -1) {
         int charInt = QVariant(rx.cap(1)).toInt();
@@ -122,8 +122,6 @@ QString worker::myReplaceMask(QString str){
         str = str.replace(replaceTo,QString(ch));
         pos += rx.matchedLength();
         pos -= (replaceTo.size() - 1);
-
-
     }
     return str;
 }
@@ -152,7 +150,7 @@ int worker::findHar(QString str){
 QString worker::getStringJoinVal(){
     QString res = "";
     foreach (data dt, har) {
-        res += dt.val;
+        res += dt.val == ";"?dt.val:dt.val+ ";";
     }
     return res;
 }
@@ -171,8 +169,12 @@ QString worker::getKey(QString str){
 
     int pos = 0;
     //Сначала обнуляем все значения которые есть в списке
-    foreach (data dt, har) {
+    /*foreach (data dt, har) {
         dt.val =";";
+    }*/
+
+    for (int i = 0; i < har.size(); ++i) {
+        har[i].val =";";
     }
 
     //далее заполняем все значения, если есть - обновляем, если нет - говорим об ошибки
@@ -181,8 +183,9 @@ QString worker::getKey(QString str){
         QString key = rx.cap(1);
         QString val = rx.cap(2);
         int index = findHar(key.toLower().trimmed());
-        if(index==-1) listError.append( "Поле не найдено!-" + key.toLower().trimmed());
-        else har[index].val = val+ ";";
+        //if(index==-1) listError.append( "Поле не найдено!-" + key.toLower().trimmed());
+        //else har[index].val = val;
+        if(index!=-1) har[index].val = val;
 
         pos += rx.matchedLength();
     }
@@ -194,6 +197,7 @@ QString worker::getKey(QString str){
 
 //заполнения характеристиками
 bool worker::appendHaract(){
+
     string getcountString = "select distinct(BINARY trim(lower(name))),trim(lower(name)) from temp_data;";
     string har_q = "";
     if(!db->exec(getcountString)){
@@ -208,10 +212,15 @@ bool worker::appendHaract(){
     }
 
     qDebug() << "Всего характеристик " << har.size();
+    /*if( har.size() > 500){
+        listError.append("Обработка бессмыслена, так как много полей - " +QVariant(har.size()).toString());
+        return false;
+    }*/
+    return true;
 }
 //НЕОБХОДИМО СДЕЛАТЬ СТАТИЧЕСКИМ!!!!
 bool worker::append_Full_Haract(){
-
+    fullhar.clear();
     string str = "select c.cat_name,name,count(*) from hars h join hars_values hv on h.id = hv.har_id "
                             " join category c on h.cat_id = c.id "
                             " where cat_name  not like 'Market.yandex.ru%' "
@@ -249,7 +258,7 @@ bool worker::append_Full_Haract(){
     return true;
 }
 
-string worker::getCratHaract(){
+string worker::getCratHaract(string art){
     string res = "<ul>";
 
     /*<ul>
@@ -263,6 +272,9 @@ string worker::getCratHaract(){
         }
     }
     res += "</ul>";
+    if(res == "<ul></ul>"){
+        listError.append(" Беда для продукта совсем нет характеристик! - " + art);
+    }
     return res;
 }
 
@@ -363,17 +375,14 @@ void worker::Scan(){
         emit onComplit();
         return;
     }
-
     if(!append_Full_Haract()){
         emit onComplit();
         return;
     }
-
     if(!appendHaract()){
         emit onComplit();
         return;
     }
-
     if(!db->query->exec("SET global group_concat_max_len = 18446744073709551615;")){
         listError.append("Не удалось выполнить SET global group_concat_max_len =");
         emit onComplit();
@@ -418,8 +427,7 @@ void worker::Scan(){
         line +=  db->query->value(5).toString() + n;/// count "В наличии"
         string polesHaracts = getKey(myReplace(db->query->value(6).toString() + QString("</tr>")));/// htm "Описание"
         //мы специально получаем все характеристики, чтобы можно было полученные данных добавить в краткое описание
-        line += getCratHaract() + n;
-        line += n;//Краткое описание;
+        line += getCratHaract(qst) + n;//Краткое описание;
         line += n;//Описание;
         line +=  n;/// "Наклейка")<<
         line +=  QString("1;");/// "Статус")<<
